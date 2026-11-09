@@ -8,6 +8,7 @@ overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
   'prisma>mysql2': 3.24.5
   braces: file:./vendor/braces-compat
+  'fast-uri@>=3.0.0 <3.1.9': 3.1.9
 
 patchedDependencies:
   '@dieub/braces-depth-guard@3.0.3-pn.3': patches/braces-depth-guard.patch
