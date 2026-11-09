@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Chat {
+  id             String              @id @default(uuid()) @db.Uuid
+  title          String              @default("새 채팅") @db.VarChar(100)
+  titleSource    String              @default("default") @map("title_source") @db.VarChar(20)
+  titleStatus    String              @default("idle") @map("title_status") @db.VarChar(20)
+  titleVersion   Int                 @default(0) @map("title_version")
+  titleStartedAt DateTime?           @map("title_started_at") @db.Timestamptz(6)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  messages       Message[]
+  requests       GenerationRequest[]
+
+  @@index([updatedAt(sort: Desc), id], map: "chats_updated_at_id_idx")
+  @@map("chats")
+}
+
+model Message {
+  id                String              @id @default(uuid()) @db.Uuid
+  chatId            String              @map("chat_id") @db.Uuid
+  role              String              @db.VarChar(20)
+  content           String              @default("")
+  status            String              @default("pending") @db.VarChar(20)
+  sequenceNo        Int                 @map("sequence_no")
+  generationId      String?             @map("generation_id") @db.Uuid
+  errorCode         String?             @map("error_code") @db.VarChar(100)
+  errorMessage      String?             @map("error_message")
+  lastActivityAt    DateTime            @default(now()) @map("last_activity_at") @db.Timestamptz(6)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  chat              Chat                @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userRequests      GenerationRequest[] @relation("user_message")
+  assistantRequests GenerationRequest[] @relation("assistant_message")
+
+  @@unique([chatId, sequenceNo], map: "messages_chat_id_sequence_no_key")
+  @@map("messages")
+}
+
+model GenerationRequest {
+  id                 String            @id @default(uuid()) @db.Uuid
+  clientRequestId    String            @unique(map: "generation_requests_client_request_id_key") @map("client_request_id") @db.Uuid
+  requestFingerprint String            @map("request_fingerprint")
+  chatId             String?           @map("chat_id") @db.Uuid
+  userMessageId      String?           @map("user_message_id") @db.Uuid
+  assistantMessageId String?           @map("assistant_message_id") @db.Uuid
+  operation          String            @db.VarChar(20)
+  status             String            @default("pending") @db.VarChar(20)
+  workerId           String?           @map("worker_id") @db.Uuid
+  lastEventSeq       BigInt            @default(0) @map("last_event_seq")
+  cancelRequestedAt  DateTime?         @map("cancel_requested_at") @db.Timestamptz(6)
+  leaseExpiresAt     DateTime?         @map("lease_expires_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  chat               Chat?             @relation(fields: [chatId], references: [id], onDelete: SetNull)
+  userMessage        Message?          @relation("user_message", fields: [userMessageId], references: [id], onDelete: SetNull)
+  assistantMessage   Message?          @relation("assistant_message", fields: [assistantMessageId], references: [id], onDelete: SetNull)
+  events             GenerationEvent[]
+
+  @@index([status, leaseExpiresAt], map: "generation_requests_status_lease_idx")
+  @@map("generation_requests")
+}
+
+model GenerationEvent {
+  id           String            @id @default(uuid()) @db.Uuid
+  generationId String            @map("generation_id") @db.Uuid
+  eventSeq     BigInt            @map("event_seq")
+  eventType    String            @map("event_type") @db.VarChar(20)
+  payload      Json
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  generation   GenerationRequest @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@unique([generationId, eventSeq], map: "generation_events_generation_id_event_seq_key")
+  @@map("generation_events")
+}
