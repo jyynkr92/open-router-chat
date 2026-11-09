@@ -85,6 +85,13 @@ DB 컨테이너는 `pnpm db:down`으로 멈춥니다. 데이터는 지워지지 
 | `pnpm test` | 단위 테스트 (DB 테스트는 `TEST_DATABASE_URL`이 있을 때만 실행) |
 | `pnpm test:e2e` | Playwright 브라우저 테스트 |
 | `pnpm build` | Prisma Client 생성 + 프로덕션 빌드 |
+| `pnpm audit` | 의존성 취약점 검사 (CI에서 low 이상이면 실패) |
+
+shadcn/ui 컴포넌트는 CLI를 프로젝트 의존성으로 두지 않고, 필요할 때만 실행합니다.
+
+```sh
+pnpm dlx shadcn@4.23.0 add <component>
+```
 
 통합 테스트는 개발 DB와 분리된 테스트 DB에서 돌립니다.
 
